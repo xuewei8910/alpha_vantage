@@ -179,8 +179,11 @@ class AlphaVantage(object):
                 # Replace the strings into percentage
                 data = {key: {k: self.percentage_to_float(v)
                               for k, v in json_response[key].items()} for key in data_key}
-            else:
+            elif data_key:
                 data = json_response[data_key]
+            else:
+                data = json_response
+
             # TODO: Fix orientation in a better way
             meta_data = json_response[meta_data_key]
             # Allow to override the output parameter in the call

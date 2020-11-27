@@ -165,7 +165,10 @@ class AlphaVantage(AlphaVantageBase):
                 self, *args, **kwargs)
             if 'json' in self.output_format.lower() or 'pandas' \
                     in self.output_format.lower():
-                data = call_response[data_key]
+                if data_key:
+                    data = call_response[data_key]
+                else:
+                    data = call_response
 
                 if meta_data_key is not None:
                     meta_data = call_response[meta_data_key]
