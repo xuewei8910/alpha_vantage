@@ -149,6 +149,10 @@ class AlphaVantage(AlphaVantageBase):
                 raise ValueError('Format: {} is not supported'.format(
                     self.output_format))
         return _format_wrapper
+    
+    @classmethod
+    def _csv_output_format(cls, func):
+        return cls._output_format(func=func, override='csv')
 
     @classmethod
     def _output_format(cls, func, override=None):

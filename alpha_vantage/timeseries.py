@@ -24,7 +24,7 @@ class TimeSeries(av):
         _FUNCTION_KEY = "TIME_SERIES_INTRADAY"
         return _FUNCTION_KEY, "Time Series ({})".format(interval), 'Meta Data'
     
-    @av._output_format(override='csv')
+    @av._csv_output_format
     @av._call_api_on_func
     def get_intraday_extended(self, symbol, interval='15min', slice='year1month1'):
         """ Return intraday time series in two json objects as data and
