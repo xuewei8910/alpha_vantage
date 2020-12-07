@@ -108,6 +108,7 @@ class AlphaVantage(object):
 
         @wraps(func)
         def _call_wrapper(self, *args, **kwargs):
+            output_format = kwargs.pop('output_format', self.output_format.lower())
             used_kwargs = kwargs.copy()
             # Get the used positional arguments given to the function
             used_kwargs.update(zip(argspec.args[positional_count:],
@@ -143,21 +144,21 @@ class AlphaVantage(object):
                     url = '{}&{}={}'.format(url, arg_name, arg_value)
             # Allow the output format to be json or csv (supported by
             # alphavantage api). Pandas is simply json converted.
-            if 'json' in self.output_format.lower() or 'csv' in self.output_format.lower():
-                oformat = self.output_format.lower()
-            elif 'pandas' in self.output_format.lower():
+            if 'json' in output_format or 'csv' in output_format:
+                oformat = output_format
+            elif 'pandas' in output_format:
                 oformat = 'json'
             else:
                 raise ValueError("Output format: {} not recognized, only json,"
                                  "pandas and csv are supported".format(
-                                     self.output_format.lower()))
+                                     output_format))
             apikey_parameter = "" if self.rapidapi else "&apikey={}".format(
                 self.key)
             if self._append_type:
                 url = '{}{}&datatype={}'.format(url, apikey_parameter, oformat)
             else:
                 url = '{}{}'.format(url, apikey_parameter)
-            return self._handle_api_call(url), data_key, meta_data_key
+            return self._handle_api_call(url, output_format=output_format), data_key, meta_data_key
         return _call_wrapper
 
     @classmethod
@@ -204,12 +205,12 @@ class AlphaVantage(object):
                 return data_pandas, meta_data
             else:
                 raise ValueError('Format: {} is not supported'.format(
-                    self.output_format))
+                    output_format))
         return _format_wrapper
     
     @classmethod
     def _csv_output_format(cls, func):
-        return cls._output_format(func=func, override='csv')
+        return cls._output_format(func, override='csv')
 
     @classmethod
     def _output_format(cls, func, override=None):
@@ -222,10 +223,22 @@ class AlphaVantage(object):
         """
         @wraps(func)
         def _format_wrapper(self, *args, **kwargs):
+            # Allow to override the output parameter in the call
+            if override is None:
+                output_format = self.output_format.lower()
+            elif 'json' or 'pandas' in override.lower():
+                output_format = override.lower()
+            elif 'csv' in override.lower():
+                output_format = override.lower()
+
+            kwargs['output_format'] = output_format
+
             call_response, data_key, meta_data_key = func(
                 self, *args, **kwargs)
-            if 'json' in self.output_format.lower() or 'pandas' \
-                    in self.output_format.lower():
+
+
+            if 'json' in output_format or 'pandas' \
+                    in output_format:
                 if data_key is not None:
                     data = call_response[data_key]
                 else:
@@ -236,11 +249,6 @@ class AlphaVantage(object):
                     meta_data = call_response[meta_data_key]
                 else:
                     meta_data = None
-                # Allow to override the output parameter in the call
-                if override is None:
-                    output_format = self.output_format.lower()
-                elif 'json' or 'pandas' in override.lower():
-                    output_format = override.lower()
                 # Choose output format
                 if output_format == 'json':
                     if isinstance(data, list):
@@ -300,11 +308,11 @@ class AlphaVantage(object):
                         data_pandas.index = pandas.to_datetime(
                             data_pandas.index)
                     return data_pandas, meta_data
-            elif 'csv' in self.output_format.lower():
+            elif 'csv' in output_format:
                 return call_response, None
             else:
                 raise ValueError('Format: {} is not supported'.format(
-                    self.output_format))
+                    output_format))
         return _format_wrapper
 
     def set_proxy(self, proxy=None):
@@ -345,7 +353,7 @@ class AlphaVantage(object):
             value = AlphaVantage._ALPHA_VANTAGE_MATH_MAP.index(matype)
         return value
 
-    def _handle_api_call(self, url):
+    def _handle_api_call(self, url, output_format):
         """ Handle the return call from the  api and return a data and meta_data
         object. It raises a ValueError on problems
 
@@ -356,8 +364,8 @@ class AlphaVantage(object):
             of the json object
         """
         response = requests.get(url, proxies=self.proxy, headers=self.headers)
-        if 'json' in self.output_format.lower() or 'pandas' in \
-                self.output_format.lower():
+        if 'json' in output_format or 'pandas' in \
+                output_format:
             json_response = response.json()
             if not json_response:
                 raise ValueError(
@@ -370,7 +378,7 @@ class AlphaVantage(object):
                 raise ValueError(json_response["Note"])
             return json_response
         else:
-            csv_response = csv.reader(response.text.splitlines())
+            csv_response = csv.DictReader(response.text.splitlines())
             if not csv_response:
                 raise ValueError(
                     'Error getting data from the api, no return was given.')
