@@ -363,7 +363,7 @@ class AlphaVantage(object):
             meta_data_key:  The key for getting the meta data information out
             of the json object
         """
-        response = requests.get(url, proxies=self.proxy, headers=self.headers)
+        response = requests.get(url, proxies=self.proxy, headers=self.headers, timeout=20)
         if 'json' in output_format or 'pandas' in \
                 output_format:
             json_response = response.json()
